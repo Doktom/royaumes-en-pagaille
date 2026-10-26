@@ -24,25 +24,47 @@ Le joueur incarne une civilisation face à 1 à 3 civilisations IA. Elles s'affr
 ## Cahier des charges V1 : réalisé
 Carte 32×32, 3 ressources, bâtiments (château, village, ferme, scierie, carrière, tour, muraille, caserne), soldat et chevalier, territoire par influence, siège, IA à 4 personnalités, 24 cartes (économie, militaire, défense, territoire, chaos, doctrines), partie de 10 min, écran de résultat, rendu canvas 2D avec effets.
 
+## Améliorations V1.1 (réalisées le 26/10/2026, suite au bilan des parties bot)
+1. Cartes : carte gardée 📌 d'un tirage à l'autre, cartes rares, 7 combos, nouvelles cartes (pacte de non-agression, coup de poignard, dragon à louer, tremblement de terre, forgeron génial, catapultes, rénovation du château, sursaut patriotique). Un joueur à la traîne reçoit presque toujours une carte rare.
+2. Fin de partie vivante : catapultes (ignorent les murs), plafond d'armée qui monte avec le temps, seuil d'attaque qui baisse, événements aléatoires (brigands, hiver, foudre, séisme sur les lignes de front, dragon sauvage pour le plus petit, banquet).
+3. Dépenser les ressources : forge (3 recherches), bâtiments niveau 1 à 3, chevaliers payants, marché 3 pour 1 vers la pierre (la pierre était le goulot d'étranglement).
+4. Traits : belliqueux soldats +20 % dégâts et +15 % vitesse, bâtiments +10 % PV ; bâtisseur nerfé (+10 % PV, influence +4 %) ; marchand revenus +10 % ; fourbe +10 % vitesse, bâtiments +15 % PV, sabotage plus fréquent.
+5. Rythme : premières attaques à 55 s (belliqueux), 100 s (bâtisseur), 120 s (marchand), 130 s (fourbe). Rattrapage de revenus jusqu'à +25 % pour les royaumes très en retard.
+6. Territoire lisible : flash de couleur quand une case change de main, message « X grignote N cases à Y ».
+7. Chronique datée avec icônes et bandeau pour les grandes nouvelles, moments marquants en fin de partie.
+8. Sons et musique synthétisés (WebAudio, bouton muet, tension musicale selon l'intensité des combats).
+9. Mode spectateur (IA contre IA, vitesse ×4), graine de carte, lien partageable, courbe de territoire en fin de partie.
+
+## Bilan après V1.1 (tools/bot.js, 24 parties à 4 civilisations)
+| Mesure | Avant | Après |
+|---|---|---|
+| Victoires du joueur (bot qui joue les cartes) | 4/16 | 9/24 (37 %) |
+| Victoires du joueur sans jouer de carte | 3/16 | 3 à 4/24 (13 à 17 %) |
+| Cases qui changent de main après 480 s (sur 120 s) | ~41 | ~60 à 140 selon la série |
+| Éliminations | 6/16 parties | 2/24 parties |
+| Le leader à 200 s gagne | 8/16 | 15/24 |
+Avec 1 seul rival, le bot gagne 10/12 : le mode 1 rival est facile (à utiliser comme niveau débutant).
+
 ## Feuille de route (idées, rien n'est validé)
-**Prochaine priorité probable : jouer plusieurs parties et ajuster le ressenti** (rythme, lisibilité, drôlerie, équilibrage des civilisations et des cartes).
+**Prochaine priorité probable : jouer à la main plusieurs parties et ajuster le ressenti** (rythme, lisibilité, drôlerie, équilibrage des civilisations et des cartes).
 
 À discuter avec l'utilisateur avant de lancer :
-- Direction artistique finale : sprites plus détaillés, saisons ou cycle jour/nuit, ambiance sonore et musique.
-- Plus d'unités (archers, catapultes, éclaireurs), chaîne de fabrication d'objets (forge, armes, outils) comme prévu dans l'idée d'origine.
+- Direction artistique finale : sprites plus détaillés, saisons ou cycle jour/nuit, vraie musique.
+- Équilibrage : le Duc Bélier (belliqueux) gagne rarement ; les bâtisseurs et marchands dominent encore.
+- Niveaux de difficulté (nombre de rivaux, bonus des IA), durée de partie réglable, taille de carte.
 - Méta-progression : déblocage de cartes entre les parties, deck personnalisable.
-- Cartes générées avec plus de variété, événements aléatoires (météo, brigands, dragon).
-- Options de partie : durée, taille de carte, graine (seed) pour rejouer la même carte.
-- Mode « spectateur » pur (IA contre IA) pour le côté contemplatif.
-- Sauvegarde du meilleur score et replays.
+- Chaîne de fabrication d'objets plus complète (armes, outils, objets uniques) et plus de types d'unités (archers, éclaireurs).
+- Alliances entre IA, diplomatie plus riche, victoire alternative.
+- Sauvegarde du meilleur score, replays, version mobile et tactile.
 
 ## Points connus à surveiller
-- La civilisation « belliqueux » est celle qui s'élimine le plus souvent ; à surveiller après chaque changement d'IA.
-- Les civilisations gagnantes accumulent beaucoup de ressources en fin de partie : prévoir des débouchés (objets fabriqués, améliorations).
+- La civilisation « belliqueux » gagne rarement ; à surveiller après chaque changement d'IA.
+- Les bâtisseurs et marchands restent les gagnants les plus fréquents.
 - Le joueur ne contrôle que par les cartes : si une partie semble « se jouer sans lui », augmenter l'impact ou la fréquence des cartes avant de toucher aux règles de base.
 - Pas encore testé sur mobile ni avec le tactile (le ciblage utilise le clic).
+- Le son n'a pas pu être écouté dans l'environnement de test : à vérifier à l'oreille (volumes, musique).
 
-## Bilan des parties en mode bot (tools/bot.js, 16 parties à 4 civilisations, 26/10/2026)
+## Bilan initial des parties en mode bot (V1, tools/bot.js, 16 parties à 4 civilisations, 26/10/2026)
 Commande : `node tools/bot.js 3 16 bot` (bot qui joue les cartes) ou `... passif` (le joueur ne joue aucune carte).
 
 | Mesure | Bot | Passif |

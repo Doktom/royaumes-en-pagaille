@@ -103,7 +103,57 @@ kbd { background: #fffaf0; border: 1px solid #c9a96a; border-bottom-width: 2px; 
 .rk.me { outline: 2px solid var(--gold); }
 
 @media (max-width: 979px) {
+  #news { font-size: 12px; }
   #app { flex-direction: column; align-items: center; }
   #panel { width: min(560px, 100%); }
   .sheet h1 { font-size: 30px; }
 }
+
+/* ---- Ajouts : chronique, cartes rares/combos, mode spectateur, fin de partie ---- */
+#news { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); max-width: 88%; background: rgba(40,28,16,.94); color: #ffe9a8; padding: 9px 18px; border-radius: 18px; font-weight: 700; font-size: 14px; line-height: 1.3; z-index: 4; text-align: center; box-shadow: 0 4px 16px rgba(0,0,0,.5); animation: newsIn .45s ease-out; }
+#news b { font-size: 18px; margin-right: 4px; }
+@keyframes newsIn { from { opacity: 0; transform: translate(-50%, -14px); } to { opacity: 1; transform: translate(-50%, 0); } }
+#banner { top: auto; bottom: 12px; }
+#toast { bottom: 52px; }
+.controls { flex-wrap: wrap; }
+.controls .hidden { display: none; }
+#hand h4 { flex-wrap: wrap; gap: 4px; }
+.card .pin { position: absolute; top: 5px; right: 8px; border: 0; background: transparent; font-size: 15px; opacity: .3; cursor: pointer; padding: 0 2px; filter: grayscale(1); }
+.card .pin:hover, .card.pinned .pin { opacity: 1; filter: none; }
+.card.pinned { box-shadow: 0 0 0 3px rgba(242,194,48,.55); }
+.card .ds { padding-right: 18px; }
+.card .cb { margin-top: 4px; font-size: 11px; font-weight: 800; color: #a05a00; background: rgba(255,200,60,.25); border-radius: 6px; padding: 2px 6px; }
+.card.combo { animation: pop .35s ease-out backwards, glow 1.4s ease-in-out infinite; }
+@keyframes glow { 50% { box-shadow: 0 0 0 3px rgba(255,180,40,.7); } }
+.card.rare { background: linear-gradient(135deg, #fffaf0 0%, #fff0c4 100%); border-color: #d4a017; }
+.card.rare .tg { background: linear-gradient(90deg, #b8860b, #e0a800); }
+.k-diplo { border-color: #5fb0a8; } .k-diplo .tg { background: #2f8a80; }
+.wait #pinTxt { margin-top: 6px; font-weight: 700; color: #8a5a10; }
+#log { gap: 4px; }
+#log div { border-left: 4px solid #999; padding-left: 6px; align-items: baseline; }
+#log time { flex: none; font-size: 10px; font-weight: 800; color: #8a7a5c; width: 28px; font-variant-numeric: tabular-nums; }
+#log b { flex: none; width: 18px; text-align: center; }
+#log div i { display: none; }
+#seedbar { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #bfae8a; padding: 0 6px; }
+#seedbar button { border: 0; background: rgba(255,255,255,.12); color: #f3e6c4; border-radius: 8px; padding: 3px 9px; font: inherit; cursor: pointer; }
+#seedbar button:hover { background: rgba(255,255,255,.22); }
+body.spectator #hand, body.spectator #res { display: none; }
+body.spectator #log { min-height: 200px; }
+.row-civ .nm small { color: #8a5a10; }
+.sheet h4 { margin: 14px 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: #7a6a52; text-align: left; }
+.sheet .chartT { margin-top: 16px; }
+#endChart { width: 100%; height: auto; background: #fffaf0; border-radius: 10px; }
+#endChron { text-align: left; font-size: 13px; }
+#endChron div { display: flex; gap: 8px; padding: 2px 0; }
+#endChron time { flex: none; width: 34px; font-weight: 800; color: #8a7a5c; font-variant-numeric: tabular-nums; }
+#endChron b { flex: none; width: 20px; text-align: center; }
+.rk { grid-template-columns: 30px 18px 1fr auto; }
+.rk .sm { text-align: right; line-height: 1.35; }
+.opts { display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; }
+.seg.wide button { width: auto; padding: 8px 16px; }
+.seedrow { display: flex; gap: 6px; justify-content: center; }
+.seedrow input { width: 120px; border: 2px solid #c9a96a; border-radius: 10px; background: #fffaf0; padding: 7px 10px; font: inherit; font-weight: 700; text-align: center; }
+.seedrow button { border: 0; background: var(--parch2); border-radius: 10px; padding: 0 12px; cursor: pointer; box-shadow: 0 2px 0 #b79a63; font-size: 17px; }
+.row { flex-wrap: wrap; }
+.big { padding: 12px 22px; font-size: 15px; }
+.civ small + em, .civ em { margin-top: 5px; }

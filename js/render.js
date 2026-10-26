@@ -163,6 +163,20 @@ class Renderer {
         case 'quip': this.bubbles = this.bubbles.filter(b => Math.hypot(b.x - e.x * T, b.y - e.y * T) > T * 2.5); if (this.bubbles.length < 7) this.bubbles.push({ x: e.x * T, y: e.y * T - T * 0.5, t: e.text, life: 3.6, max: 3.6 }); break;
         case 'attackOrder': P.push({ k: 'ring', x: e.x * T, y: e.y * T, r0: T * 2, r1: T * 0.3, life: 1.4, max: 1.4, c: '#ff5a4a' }); break;
         case 'cardPlayed': if (e.x >= 0) P.push({ k: 'ring', x: e.x * T, y: e.y * T, r0: 0, r1: T * 2.2, life: 0.9, max: 0.9, c: '#ffe27a' }); break;
+        case 'claims': {
+          const W = MAP_W, col = this.sim.civs[e.civ].color;
+          if (P.length < 600) for (const i of e.tiles) P.push({ k: 'flash', x: (i % W) * T, y: Math.floor(i / W) * T, w: T, c: col, life: 0.9, max: 0.9 });
+          break;
+        }
+        case 'quake':
+          this.shake = { t: 0.8, mag: T * 0.28 };
+          for (let i = 0; i < 26; i++) { const a = Math.random() * 6.28, d = Math.random() * e.r * T; this.puff(e.x * T + Math.cos(a) * d, e.y * T + Math.sin(a) * d, i % 2 ? '#9a8a70' : '#6b5d48', 1.6); }
+          P.push({ k: 'ring', x: e.x * T, y: e.y * T, r0: 0, r1: e.r * T, life: 0.9, max: 0.9, c: '#b89b6a' });
+          break;
+        case 'rock': P.push({ k: 'rock', x1: e.x1 * T, y1: e.y1 * T, x2: e.x2 * T, y2: e.y2 * T, life: 0.55, max: 0.55 }); break;
+        case 'fire': for (let i = 0; i < 3; i++) this.puff(e.x * T, e.y * T, i % 2 ? '#ff7a1c' : '#ffd23a', 1.3); break;
+        case 'upgrade': P.push({ k: 'ring', x: e.x * T, y: e.y * T, r0: 0, r1: T * 1.1, life: 0.8, max: 0.8, c: '#ffd23a' }); P.push({ k: 'text', x: e.x * T, y: e.y * T - T * 0.3, vy: -T * 0.8, life: 1.2, max: 1.2, t: '⭐', c: '#fff', big: true }); break;
+        case 'dragon': P.push({ k: 'ring', x: e.x * T, y: e.y * T, r0: T * 0.3, r1: T * 3, life: 1.0, max: 1.0, c: '#ff6a3a' }); P.push({ k: 'text', x: e.x * T, y: e.y * T - T * 0.5, vy: -T * 0.6, life: 1.6, max: 1.6, t: 'GRAOUUU !', c: '#ffb13a', big: true }); break;
         case 'spawn': P.push({ k: 'ring', x: e.x * T, y: e.y * T, r0: T * 0.1, r1: T * 0.5, life: 0.4, max: 0.4, c: '#ffffff' }); break;
       }
     }
@@ -189,13 +203,24 @@ class Renderer {
     if (!this.terrOff) this.paintTerrain();
     if (this.ovVersion !== sim.terrVersion) this.paintOverlay();
     this.updateParts(dt);
+    let sx = 0, sy = 0;
+    if (this.shake && this.shake.t > 0) {
+      this.shake.t -= dt;
+      const k = Math.max(0, this.shake.t / 0.8) * this.shake.mag;
+      sx = (Math.random() - 0.5) * 2 * k; sy = (Math.random() - 0.5) * 2 * k;
+    }
     g.setTransform(1, 0, 0, 1, 0, 0);
+    g.fillStyle = '#4a3a28'; g.fillRect(0, 0, this.cv.width, this.cv.height);
+    g.setTransform(1, 0, 0, 1, sx * this.dpr, sy * this.dpr);
     g.drawImage(this.terrOff, 0, 0);
-    g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    g.setTransform(this.dpr, 0, 0, this.dpr, sx * this.dpr, sy * this.dpr);
     this.drawWater(g, now);
-    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.setTransform(1, 0, 0, 1, sx * this.dpr, sy * this.dpr);
     g.drawImage(this.ov, 0, 0);
-    g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    g.setTransform(this.dpr, 0, 0, this.dpr, sx * this.dpr, sy * this.dpr);
+    // flashs de territoire
+    for (const p of this.parts) if (p.k === 'flash') { g.globalAlpha = Math.max(0, p.life / p.max) * 0.65; g.fillStyle = p.c; g.fillRect(p.x, p.y, p.w, p.w); }
+    g.globalAlpha = 1;
     // boue
     for (const p of this.parts) if (p.k === 'mud') {
       g.fillStyle = `rgba(110,72,40,${0.32 * Math.min(1, p.life / 3)})`;
@@ -207,7 +232,8 @@ class Renderer {
     for (const b of bl) if (BUILDINGS[b.type].prod) this.drawWorkers(g, b, now, sim);
     // unités
     const ul = sim.units.slice().sort((a, b) => a.y - b.y);
-    for (const u of ul) this.drawUnit(g, u, now, sim);
+    for (const u of ul) if (u.type !== 'dragon') this.drawUnit(g, u, now, sim);
+    for (const u of ul) if (u.type === 'dragon') this.drawDragon(g, u, now, sim);
     // particules
     this.drawParts(g);
     this.drawClouds(g, now, dt);
@@ -250,6 +276,10 @@ class Renderer {
         const px = p.x1 + (p.x2 - p.x1) * Math.max(0, t - 0.15), py = p.y1 + (p.y2 - p.y1) * Math.max(0, t - 0.15) - Math.sin(Math.max(0, t - 0.15) * Math.PI) * T * 0.4;
         g.globalAlpha = 1; g.strokeStyle = '#4a3a28'; g.lineWidth = Math.max(1.2, T * 0.05);
         g.beginPath(); g.moveTo(px, py); g.lineTo(x, y); g.stroke();
+      } else if (p.k === 'rock') {
+        const t = 1 - f, x = p.x1 + (p.x2 - p.x1) * t, y = p.y1 + (p.y2 - p.y1) * t - Math.sin(t * Math.PI) * T * 1.4;
+        g.globalAlpha = 1; g.fillStyle = '#6f6a62'; g.strokeStyle = '#2f2a24'; g.lineWidth = 1.3;
+        g.beginPath(); g.arc(x, y, T * 0.1, 0, 7); g.fill(); g.stroke();
       } else if (p.k === 'ring') { const t = 1 - f; g.globalAlpha = f; g.strokeStyle = p.c; g.lineWidth = Math.max(2, T * 0.12); g.beginPath(); g.arc(p.x, p.y, p.r0 + (p.r1 - p.r0) * t, 0, 7); g.stroke(); }
       else if (p.k === 'text') {
         g.globalAlpha = Math.min(1, f * 2); g.font = `${p.big ? 800 : 700} ${Math.round(T * (p.big ? 0.62 : 0.5))}px "Trebuchet MS",sans-serif`; g.textAlign = 'center';
@@ -316,7 +346,7 @@ class Renderer {
   drawBuilding(g, b, now, sim) {
     const T = this.T, c = sim.civs[b.civ], cx = (b.x + 0.5) * T, cy = (b.y + 0.5) * T;
     const age = sim.time - b.born;
-    const grow = b.instant ? 1 : Math.min(1, 0.25 + age / 0.7 * 0.75);
+    const grow = (b.instant ? 1 : Math.min(1, 0.25 + age / 0.7 * 0.75)) * (1 + 0.07 * ((b.lvl || 1) - 1));
     const bounce = grow < 1 ? 1 + Math.sin(grow * Math.PI) * 0.15 : 1;
     g.save(); g.translate(cx, cy + T * 0.4); g.scale(grow * bounce, grow * bounce); g.translate(-cx, -(cy + T * 0.4));
     const col = c.color, dark = c.dark;
@@ -402,6 +432,17 @@ class Renderer {
         g.fillStyle = col; g.fillRect(cx - T * 0.2, cy - T * 0.22, T * 0.4, T * 0.1);
         break;
       }
+      case 'forge': {
+        shadow(T * 0.4); g.strokeStyle = line; g.lineWidth = 1.4;
+        g.fillStyle = '#8f8b84'; g.fillRect(cx - T * 0.34, cy - T * 0.1, T * 0.68, T * 0.42); g.strokeRect(cx - T * 0.34, cy - T * 0.1, T * 0.68, T * 0.42);
+        g.fillStyle = shade(col, 0.8); g.beginPath(); g.moveTo(cx - T * 0.4, cy - T * 0.08); g.lineTo(cx - T * 0.2, cy - T * 0.34); g.lineTo(cx + T * 0.4, cy - T * 0.34); g.lineTo(cx + T * 0.4, cy - T * 0.08); g.closePath(); g.fill(); g.stroke();
+        g.fillStyle = '#6b6560'; g.fillRect(cx + T * 0.2, cy - T * 0.5, T * 0.12, T * 0.2); g.strokeRect(cx + T * 0.2, cy - T * 0.5, T * 0.12, T * 0.2);
+        const glow = 0.55 + 0.35 * Math.sin(now * 0.012 + b.id);
+        g.fillStyle = `rgba(255,150,40,${glow})`; g.beginPath(); g.arc(cx - T * 0.1, cy + T * 0.12, T * 0.11, 0, 7); g.fill();
+        g.fillStyle = '#2f2c2a'; g.fillRect(cx + T * 0.04, cy + T * 0.16, T * 0.22, T * 0.07); g.fillRect(cx + T * 0.09, cy + T * 0.23, T * 0.12, T * 0.09);
+        if (Math.random() < 0.05) this.parts.push({ k: 'spark', x: cx - T * 0.1, y: cy + T * 0.05, vx: (Math.random() - 0.5) * T * 1.5, vy: -T * 1.2, life: 0.5, max: 0.5, c: '#ffc23a', s: T * 0.05 });
+        break;
+      }
       case 'barracks': {
         shadow(T * 0.45); g.strokeStyle = line; g.lineWidth = 1.4;
         g.fillStyle = '#c99a63'; g.fillRect(cx - T * 0.38, cy - T * 0.06, T * 0.76, T * 0.38); g.strokeRect(cx - T * 0.38, cy - T * 0.06, T * 0.76, T * 0.38);
@@ -414,6 +455,11 @@ class Renderer {
       }
     }
     g.restore();
+    if (b.lvl > 1) {
+      g.textAlign = 'center'; g.font = `800 ${Math.round(T * 0.3)}px "Trebuchet MS",sans-serif`;
+      const stars = '★'.repeat(b.lvl - 1), yy = cy - T * (b.type === 'capital' ? 0.95 : 0.55);
+      g.lineWidth = 3; g.strokeStyle = 'rgba(40,30,20,.85)'; g.strokeText(stars, cx, yy); g.fillStyle = '#ffd23a'; g.fillText(stars, cx, yy);
+    }
     // santé / dégâts
     if (b.hp < b.maxhp) {
       const f = Math.max(0, b.hp / b.maxhp), w = T * (b.type === 'capital' ? 1.1 : 0.7), y = cy - T * (b.type === 'capital' ? 1.1 : 0.62);
@@ -439,7 +485,56 @@ class Renderer {
   }
 
   // -------------------------------------------------------- Unités
+  drawCatapult(g, u, now, sim) {
+    const T = this.T, c = sim.civs[u.civ], x = u.x * T, y = u.y * T, f = u.face || 1;
+    const moved = u._lx != null && Math.hypot(u.x - u._lx, u.y - u._ly) > 0.0008;
+    u._lx = u.x; u._ly = u.y;
+    g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.ellipse(x, y + T * 0.16, T * 0.3, T * 0.1, 0, 0, 7); g.fill();
+    g.strokeStyle = '#3a2a1a'; g.lineWidth = 1.4;
+    g.fillStyle = '#9b6b3a'; g.beginPath(); g.moveTo(x - T * 0.26, y + T * 0.06); g.lineTo(x + T * 0.26, y + T * 0.06); g.lineTo(x + T * 0.18, y - T * 0.08); g.lineTo(x - T * 0.18, y - T * 0.08); g.closePath(); g.fill(); g.stroke();
+    for (const wx of [-0.17, 0.17]) { g.fillStyle = '#6b4a2a'; g.beginPath(); g.arc(x + wx * T, y + T * 0.12, T * 0.09, 0, 7); g.fill(); g.stroke(); }
+    const fire = u.fighting > 0 ? Math.min(1, Math.max(0, (1.5 - u.cd) / 0.35)) : 0;
+    const ang = -1.15 + fire * 1.6 + (moved ? Math.sin(now * 0.01) * 0.05 : 0);
+    g.save(); g.translate(x, y - T * 0.04); g.scale(f, 1); g.rotate(ang);
+    g.strokeStyle = '#6b4a2a'; g.lineWidth = Math.max(2.5, T * 0.09); g.lineCap = 'round';
+    g.beginPath(); g.moveTo(-T * 0.1, 0); g.lineTo(T * 0.34, 0); g.stroke();
+    g.fillStyle = '#4a3a28'; g.beginPath(); g.arc(T * 0.36, 0, T * 0.07, 0, 7); g.fill();
+    if (!fire || fire < 0.4) { g.fillStyle = '#6f6a62'; g.beginPath(); g.arc(T * 0.36, -T * 0.06, T * 0.05, 0, 7); g.fill(); }
+    g.restore();
+    g.fillStyle = c.color; g.fillRect(x - f * T * 0.2, y - T * 0.2, T * 0.09, T * 0.14);
+    if (u.hp < u.maxhp) { const w = T * 0.5, fr = u.hp / u.maxhp; g.fillStyle = 'rgba(30,20,10,.75)'; g.fillRect(x - w / 2 - 1, y - T * 0.34 - 1, w + 2, T * 0.07 + 2); g.fillStyle = fr > 0.5 ? '#6cd04a' : fr > 0.25 ? '#f0b53a' : '#e0483f'; g.fillRect(x - w / 2, y - T * 0.34, w * fr, T * 0.07); }
+  }
+  drawDragon(g, u, now, sim) {
+    const T = this.T, c = sim.civs[u.civ], x = u.x * T, f = u.face || 1, flap = Math.sin(now * 0.016 + u.id);
+    const y = u.y * T - T * 0.5 + Math.sin(now * 0.004 + u.id) * T * 0.05;
+    g.fillStyle = 'rgba(0,0,0,.2)'; g.beginPath(); g.ellipse(u.x * T, u.y * T + T * 0.1, T * 0.4, T * 0.12, 0, 0, 7); g.fill();
+    g.save(); g.translate(x, y); g.scale(f, 1);
+    g.lineJoin = 'round'; g.strokeStyle = '#2a3d22'; g.lineWidth = 1.6;
+    // ailes
+    g.fillStyle = c.color;
+    g.beginPath(); g.moveTo(-T * 0.05, -T * 0.06); g.lineTo(-T * 0.3, -T * (0.66 + 0.22 * flap)); g.lineTo(-T * 0.52, -T * (0.34 + 0.12 * flap)); g.lineTo(-T * 0.36, -T * 0.1); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = shade(c.color, 0.8);
+    g.beginPath(); g.moveTo(T * 0.05, -T * 0.06); g.lineTo(-T * 0.12, -T * (0.5 + 0.2 * flap)); g.lineTo(-T * 0.3, -T * (0.26 + 0.1 * flap)); g.lineTo(-T * 0.2, -T * 0.08); g.closePath(); g.fill(); g.stroke();
+    // queue
+    g.strokeStyle = '#3f7d36'; g.lineWidth = T * 0.1; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(-T * 0.22, T * 0.04); g.quadraticCurveTo(-T * 0.5, T * 0.2 + flap * T * 0.04, -T * 0.62, T * 0.02); g.stroke();
+    // corps
+    g.fillStyle = '#5fb04a'; g.strokeStyle = '#2a3d22'; g.lineWidth = 1.6;
+    g.beginPath(); g.ellipse(0, 0, T * 0.3, T * 0.17, 0, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = '#e8d46a'; g.beginPath(); g.ellipse(T * 0.02, T * 0.07, T * 0.22, T * 0.07, 0, 0, 7); g.fill();
+    // tête
+    g.fillStyle = '#5fb04a'; g.beginPath(); g.ellipse(T * 0.34, -T * 0.08, T * 0.17, T * 0.12, -0.2, 0, 7); g.fill(); g.stroke();
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(T * 0.38, -T * 0.12, T * 0.04, 0, 7); g.fill(); g.fillStyle = '#c00'; g.beginPath(); g.arc(T * 0.39, -T * 0.12, T * 0.02, 0, 7); g.fill();
+    g.fillStyle = '#e8d46a'; g.beginPath(); g.moveTo(T * 0.28, -T * 0.18); g.lineTo(T * 0.24, -T * 0.32); g.lineTo(T * 0.33, -T * 0.2); g.closePath(); g.fill();
+    if (u.fighting > 0) {
+      g.fillStyle = 'rgba(255,150,40,.85)'; g.beginPath(); g.moveTo(T * 0.5, -T * 0.06); g.lineTo(T * 0.95, -T * 0.2 + Math.random() * T * 0.1); g.lineTo(T * 0.95, T * 0.1 + Math.random() * T * 0.1); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(255,230,90,.9)'; g.beginPath(); g.moveTo(T * 0.5, -T * 0.04); g.lineTo(T * 0.8, -T * 0.08); g.lineTo(T * 0.8, T * 0.04); g.closePath(); g.fill();
+    }
+    g.restore();
+    if (u.hp < u.maxhp) { const w = T * 0.8, fr = u.hp / u.maxhp; g.fillStyle = 'rgba(30,20,10,.75)'; g.fillRect(x - w / 2 - 1, y - T * 0.5 - 1, w + 2, T * 0.09 + 2); g.fillStyle = fr > 0.5 ? '#6cd04a' : fr > 0.25 ? '#f0b53a' : '#e0483f'; g.fillRect(x - w / 2, y - T * 0.5, w * fr, T * 0.09); }
+  }
   drawUnit(g, u, now, sim) {
+    if (u.type === 'catapult') { this.drawCatapult(g, u, now, sim); return; }
     const T = this.T, c = sim.civs[u.civ], k = u.type === 'knight' ? 1.55 : 1;
     const x = u.x * T, y = u.y * T;
     const moved = u._lx != null && Math.hypot(u.x - u._lx, u.y - u._ly) > 0.0008;

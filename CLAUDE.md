@@ -1,9 +1,9 @@
 # CLAUDE.md : contexte du projet « Royaumes en Pagaille »
 
-Ce fichier permet de reprendre le travail depuis n'importe quelle session. Lire aussi `docs/DESIGN.md` (concept, décisions, feuille de route).
+Ce fichier permet de reprendre le travail depuis n'importe quelle session. Lire aussi `docs/DESIGN.md` (concept, décisions, bilans de tests, feuille de route).
 
 ## Résumé
-Jeu de stratégie contemplatif, médiéval fun et décalé, en 2D vue de dessus, jouable dans le navigateur (HTML/Canvas/JS pur, aucune dépendance, aucun build). Le joueur dirige une civilisation qui se bat **toute seule** contre 1 à 3 IA pour du territoire ; il l'influence **uniquement par des cartes** (30 à 45 s entre deux tirages de 3 cartes).
+Jeu de stratégie contemplatif, médiéval fun et décalé, en 2D vue de dessus, jouable dans le navigateur (HTML/Canvas/JS pur, aucune dépendance, aucun build). Le joueur dirige une civilisation qui se bat **toute seule** contre 1 à 3 IA pour du territoire ; il l'influence **uniquement par des cartes** (30 à 45 s entre deux tirages). Un mode **spectateur** (IA contre IA) existe aussi.
 
 - Dépôt : https://github.com/Doktom/royaumes-en-pagaille (public, branche `main`)
 - Jeu en ligne (GitHub Pages, déploiement auto à chaque push sur `main`) : https://doktom.github.io/royaumes-en-pagaille/
@@ -12,35 +12,40 @@ Jeu de stratégie contemplatif, médiéval fun et décalé, en 2D vue de dessus,
 ## Architecture (scripts classiques, pas de modules ES : doit marcher en ouvrant `index.html`)
 | Fichier | Rôle |
 |---|---|
-| `js/data.js` | Constantes : terrains, bâtiments, unités, civilisations, personnalités d'IA, doctrines, répliques, **liste des cartes** (`CARDS`) |
-| `js/sim.js` | Classe `Sim` : génération de carte, territoire par influence, économie, unités, combats, IA, cartes du joueur. **Aucune dépendance au DOM.** Pas de rendu |
-| `js/render.js` | Classe `Renderer` : canvas 2D, terrain mis en cache hors écran, couche de territoire en cache, bâtiments/unités dessinés en vectoriel, particules, bulles de dialogue |
-| `js/main.js` | Interface (menu, panneau, cartes, journal, fin de partie), boucle de jeu (pas fixe 0,05 s), vitesses pause/×1/×2 |
+| `js/data.js` | Constantes : terrains, bâtiments, niveaux, unités, techs, civilisations, personnalités d'IA, doctrines, répliques, **cartes** (`CARDS`), **combos** (`COMBOS`), **événements aléatoires** (`EVENTS`) |
+| `js/sim.js` | Classe `Sim` : carte, territoire par influence, économie, unités, combats, IA, cartes du joueur, événements, pactes. **Aucune dépendance au DOM** |
+| `js/render.js` | Classe `Renderer` : canvas 2D, terrain et territoire en cache, bâtiments/unités vectoriels, particules, bulles, flashs de territoire, secousse |
+| `js/audio.js` | Objet `Sound` : effets et musique synthétisés avec WebAudio (aucun fichier audio), bouton muet mémorisé |
+| `js/main.js` | Interface (menu, panneau, cartes, chronique, fin de partie), boucle de jeu (pas fixe 0,05 s), vitesses, lien partageable |
 | `css/style.css` | Thème parchemin |
-| `tools/headless.js` | Simulation sans interface pour l'équilibrage |
+| `tools/headless.js`, `tools/bot.js` | Simulation sans interface (équilibrage) et bot qui joue les cartes (statistiques) |
 
-Ordre de chargement dans `index.html` : data, sim, render, main (`hash2` défini dans sim.js est utilisé par render.js).
+Ordre de chargement dans `index.html` : data, sim, render, audio, main (`hash2` défini dans sim.js est utilisé par render.js).
 
 ## Mécaniques clés (à connaître avant de modifier)
-- **Territoire** : `recomputeTerritory()` toutes les 0,5 s. Chaque bâtiment projette une influence (`r`, `s` dans `BUILDINGS`) qui décroît linéairement avec la distance ; les soldats projettent aussi (0,5, rayon 1,9). Une case change de propriétaire si l'influence adverse dépasse l'actuelle de 25 % + 0,15 et vaut plus de 0,55. Une case avec bâtiment appartient toujours à son propriétaire.
-- **Combat** : les unités suivent un champ de distance BFS vers leur cible (`getField`). Elles attaquent les unités ennemies au contact, et les bâtiments ennemis qui bloquent leur chemin (donc les murailles bloquent vraiment). Tours et château tirent sur les unités à portée.
-- **IA** (`aiThink`, toutes les 2 à 3,4 s) : choisit parmi des options notées (fermes, scieries, carrières, villages, tours, murailles, casernes) pondérées par `PERSONALITIES` × `DOCTRINES`. `aiMilitary` lance des attaques en groupe quand assez de soldats sont inactifs.
-- **Le joueur est aussi piloté par l'IA** (civ index 0). Ses cartes de doctrine changent ses pondérations ; les autres cartes donnent des effets directs (`CARDS[].apply`).
-- **Cartes ciblées** : champ `target` = `'own'` (case libre de son territoire) ou `'any'` ; validation dans `Sim.validTarget`.
-- **Équilibrage de départ** : aucune attaque avant 60 s, le château n'est pas visé avant 200 s, château à 650 PV, armée limitée par `armyCap`.
-- Événements : la sim empile des événements (`emit`/`drain`) que l'interface et le rendu consomment (journal, particules, bulles). Ne pas y mettre de logique de jeu.
+- **Territoire** : `recomputeTerritory()` toutes les 0,5 s. Chaque bâtiment projette une influence (`r`, `s`, multipliés par le niveau) qui décroît avec la distance ; les soldats aussi (0,5, rayon 1,9). Une case change de propriétaire si l'influence adverse dépasse l'actuelle de 25 % + 0,15 et vaut plus de 0,55. Une case avec bâtiment appartient toujours à son propriétaire.
+- **Combat** : les unités suivent un champ de distance BFS (`getField`). Elles attaquent les unités ennemies au contact et les bâtiments ennemis qui bloquent leur chemin (les murailles bloquent vraiment). Tours et château tirent. Les **catapultes** bombardent à portée 4,2 sans être bloquées. Le **dragon** vole, ignore les murs, dure 40 s.
+- **Hostilité** : toujours passer par `Sim.hostile(a, b)` (pas `civ !== civ`) à cause des **pactes** de non-agression.
+- **Niveaux 1 à 3** (`b.lvl`, `LVL` et `UPGRADE_COST` dans data.js) : PV, influence, tir, production. **Forge** : débloque 3 recherches (`TECHS` : armes, armures, fortifications) et les catapultes. L'IA dépense via `aiSpend` (réserve de ressources, marché 3 pour 1 vers la pierre).
+- **Traits des civilisations** (`PERSONALITIES`) : belliqueux (soldats +20 % dégâts, +15 % vitesse, attaque dès 55 s), bâtisseur (bâtiments +10 % PV), marchand (revenus +10 %), fourbe (cible le plus faible, sabotage périodique).
+- **Rythme** : `firstAttack` par personnalité, seuil d'attaque qui baisse avec le temps, plafond d'armée qui monte (`armyCap`), **événements aléatoires** toutes les 60 à 100 s (brigands, hiver, foudre, séisme, dragon sauvage pour le plus petit, banquet), **rattrapage** de revenus (`catchup`, jusqu'à +25 %) pour les royaumes à la traîne.
+- **Le joueur est aussi piloté par l'IA** (civ index 0 ; en mode spectateur personne n'est joueur). Ses cartes de doctrine changent ses pondérations ; les autres cartes donnent des effets directs (`CARDS[].apply`).
+- **Cartes** : tirage de 3 (4 avec la carte gardée 📌). Cartes **rares** (poids 0,35, ×3 quand on est à la traîne, et une rare est quasi garantie si on est derrière). **Combos** : jouer une carte « b » moins de 90 s après une carte « a » (`COMBOS`) déclenche un bonus. Ciblage : `target` = `'own'` ou `'any'`, validé par `Sim.validTarget`.
+- **Événements de la sim** : la sim empile des événements (`emit`/`drain`) consommés par l'interface (chronique, bandeau `news`, sons) et le rendu (particules). `log(text, civ, icon, imp)` : imp 0 ignoré, 1 chronique, 2 bandeau + résumé de fin. Ne pas y mettre de logique de jeu.
+- **Graine et lien** : `Sim({seed})` rend la carte et la partie reproductibles pour une même suite d'actions du joueur. Le lien `#s=graine&c=civ&r=rivaux&m=play|spec` est mis à jour à chaque partie.
+- **Équilibrage de départ** : pas d'attaque avant `firstAttack`, château non visé avant 200 s, château à 650 PV.
 
 ## Tester
-- **Sans interface** (rapide, sert à l'équilibrage) : `node tools/headless.js <rivaux> <nb_parties> [cards]`, par exemple `node tools/headless.js 3 8 cards`. Affiche l'état final par civilisation. Surveiller : éliminations trop fréquentes, ressources qui s'accumulent, nombre de bâtiments absurde.
-- **Navigateur** : servir le dossier (`python -m http.server 8890`) puis ouvrir `http://localhost:8890/`. Ouvrir `index.html` directement fonctionne aussi. Hook de debug : `window.__game` (`sim`, `startGame`, `setSpeed`, `renderer`, `settings`).
+- **Sans interface** : `node tools/headless.js <rivaux> <parties> [cards]` (état final par civilisation) et `node tools/bot.js <rivaux> <parties> <bot|passif>` (statistiques agrégées : victoires par personnalité, éliminations, rythme). Surveiller : une civilisation qui gagne trop, éliminations précoces, fin de partie figée, ressources inutilisées.
+- **Navigateur** : servir le dossier (`python -m http.server 8890`) puis ouvrir `http://localhost:8890/`. Hook de debug : `window.__game` (`sim`, `startGame`, `setSpeed`, `renderer`, `settings`, `Sound`). Le navigateur intégré de l'app throttle le rendu quand l'onglet n'est pas au premier plan : sélectionner l'onglet avant de prendre une capture.
 - Vérifier la console du navigateur : aucune erreur attendue.
 
 ## Conventions
 - Pas de dépendances, pas d'outil de build, pas de modules ES.
 - Garder `sim.js` indépendant du DOM pour pouvoir le tester en Node.
-- Les textes affichés sont en français, drôles, courts.
-- Après un changement de règle : relancer `tools/headless.js` sur plusieurs parties avant de commiter.
+- Textes affichés en français, drôles, courts.
+- Après un changement de règle : relancer `tools/bot.js` (au moins 16 parties, 3 rivaux) avant de commiter, et noter les résultats dans `docs/DESIGN.md`.
 - Commit en français, push sur `main` : Pages se met à jour tout seul (1 à 2 min).
 
-## État actuel (V1 terminée)
-Jouable : menu (choix de civilisation, 1 à 3 rivaux), carte 32×32, partie de 10 min, 24 cartes, 4 doctrines, vitesses ×1/×2, pause, journal, bulles de dialogue, écran de fin. Voir la feuille de route dans `docs/DESIGN.md` pour la suite.
+## État actuel (V1.1)
+V1 + améliorations : cartes gardées, rares, combos, pactes, dragon, séisme, catapultes, forge et niveaux, événements aléatoires, traits de civilisation, chronique et bandeaux d'actualité, flashs de territoire, résumé de fin (courbe de territoire, moments marquants), sons et musique, mode spectateur (×4), graine et lien partageable. Voir `docs/DESIGN.md` pour les bilans chiffrés et la suite.
