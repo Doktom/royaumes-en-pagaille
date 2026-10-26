@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Royaumes en Pagaille</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="map"></canvas>
+    <div id="banner" class="hidden"></div>
+    <div id="toast" class="hidden"></div>
+    <div id="pausetag" class="hidden">⏸ PAUSE</div>
+  </div>
+
+  <aside id="panel">
+    <header>
+      <div class="brand">Royaumes <em>en Pagaille</em></div>
+      <div class="clock"><span id="time">10:00</span></div>
+    </header>
+    <div class="controls">
+      <button id="bPause" title="Pause (Espace)">⏸</button>
+      <button id="b1" title="Vitesse normale">×1</button>
+      <button id="b2" title="Vitesse ×2 (F)">×2</button>
+      <span id="doctrine" class="doctrine"></span>
+    </div>
+    <section id="board"></section>
+    <section id="res"></section>
+    <section id="hand"></section>
+    <section id="log"></section>
+    <div id="tileinfo"></div>
+  </aside>
+</div>
+
+<div id="menu" class="overlay">
+  <div class="sheet">
+    <h1>Royaumes <em>en Pagaille</em></h1>
+    <p class="sub">Une petite guerre de territoire que vous regardez... et que vous influencez à coups de cartes absurdes.</p>
+    <h3>Choisissez votre civilisation</h3>
+    <div id="civPick"></div>
+    <h3>Nombre de rivaux</h3>
+    <div id="rivalPick" class="seg">
+      <button data-n="1">1</button><button data-n="2" class="on">2</button><button data-n="3">3</button>
+    </div>
+    <button id="bStart" class="big">Lancer la partie</button>
+    <p class="hint">Toutes les 30 à 45 s, vous recevez 3 cartes : jouez-en une. Le reste, ce sont vos sujets qui s'en chargent.<br>
+      Raccourcis : <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> cartes · <kbd>Espace</kbd> pause · <kbd>F</kbd> vitesse ×2 · <kbd>Échap</kbd> annuler</p>
+  </div>
+</div>
+
+<div id="end" class="overlay hidden">
+  <div class="sheet">
+    <h1 id="endTitle">Fin de partie</h1>
+    <p id="endSub" class="sub"></p>
+    <div id="endRank"></div>
+    <div class="row">
+      <button id="bAgain" class="big">Rejouer</button>
+      <button id="bMenu" class="big alt">Menu</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/render.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
