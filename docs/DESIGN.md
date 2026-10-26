@@ -41,3 +41,18 @@ Carte 32×32, 3 ressources, bâtiments (château, village, ferme, scierie, carri
 - Les civilisations gagnantes accumulent beaucoup de ressources en fin de partie : prévoir des débouchés (objets fabriqués, améliorations).
 - Le joueur ne contrôle que par les cartes : si une partie semble « se jouer sans lui », augmenter l'impact ou la fréquence des cartes avant de toucher aux règles de base.
 - Pas encore testé sur mobile ni avec le tactile (le ciblage utilise le clic).
+
+## Bilan des parties en mode bot (tools/bot.js, 16 parties à 4 civilisations, 26/10/2026)
+Commande : `node tools/bot.js 3 16 bot` (bot qui joue les cartes) ou `... passif` (le joueur ne joue aucune carte).
+
+| Mesure | Bot | Passif |
+|---|---|---|
+| Victoires du joueur | 4/16 | 3/16 |
+| Victoires par personnalité | bâtisseur 7, fourbe 5, marchand 4, belliqueux 0 | marchand 8, bâtisseur 4, fourbe 3, belliqueux 1 |
+| Le leader à 200 s gagne | 8/16 | 13/16 |
+| Éliminations | 6 (belliqueux 3) | 5 (belliqueux 2) |
+| Ressources stockées par civilisation en fin de partie | ~3 460 | ~3 290 |
+
+Autres constats (10 parties) : les premières attaques partent toutes à 60-63 s (au déblocage), environ 54 bâtiments détruits par partie, le nombre de changements de territoire s'effondre après 300 s (484, 1025, 617, 391, 256, 292 par tranche de 100 s) : le jeu se fige en fin de partie. Aucune fin par domination.
+
+Conclusions : les cartes ont un effet réel mais faible (elles aident surtout à remonter), le belliqueux est trop faible, la fin de partie est trop calme, les ressources s'accumulent sans usage.
